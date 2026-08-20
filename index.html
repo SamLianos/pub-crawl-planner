@@ -170,7 +170,15 @@ select{cursor:pointer}
 .notebtn{display:grid;place-items:center;font-size:11.5px;padding:0 8px}
 .notebtn:hover{background:var(--raise-lit);color:var(--bone)}
 .notebtn.has{border-color:var(--brass);color:var(--brass)}
-.card textarea{margin-top:9px}
+.card textarea{margin-top:0}
+.extras{margin-top:10px;display:grid;gap:8px}
+.extras .lbl{margin:2px 0 -3px}
+.gpreview{margin:0;font-size:13px;line-height:1.55;color:var(--bone);background:var(--ink);
+  border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.gpreview .gans{color:var(--amber);font-weight:600}
+.gshuffle{justify-self:start;background:none;border:0;color:var(--brass);font-size:11.5px;
+  font-weight:600;padding:2px 0;text-decoration:underline}
+.gshuffle:hover{color:var(--amber)}
 
 .leg{display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:center}
 .legline{height:34px;width:0;border-left:2px dashed var(--brass);margin-left:21px;opacity:.75}
@@ -213,6 +221,13 @@ select{cursor:pointer}
   background:var(--raise);border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;
   text-align:left;white-space:pre-wrap}
 .nightnotes:empty{display:none}
+.nightgame{width:100%;max-width:34em;background:var(--raise);border:1px solid var(--brass);
+  border-radius:var(--r);padding:15px;text-align:center;display:grid;gap:11px;justify-items:center}
+.glabel{font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--brass)}
+.gtext{margin:0;font-size:16px;line-height:1.5}
+.greveal{margin:0;font-size:17px;line-height:1.5;font-weight:600;color:var(--amber)}
+.gdie{font-family:var(--display);font-size:44px;color:var(--amber);line-height:1}
+.nightgame .btn{padding:11px 20px}
 .nightdir{margin-top:6px;text-decoration:none;display:inline-block}
 .nightnext{flex:0 0 auto;padding:14px 22px;border-top:1px solid var(--line);text-align:center;
   font-size:13px;color:var(--dim)}
@@ -413,6 +428,7 @@ select{cursor:pointer}
     <p class="nightsub" id="nightSub"></p>
     <p class="nightlate" id="nightLate"></p>
     <p class="nightnotes" id="nightNotes"></p>
+    <div class="nightgame" id="nightGame" hidden></div>
     <a class="btn ghost nightdir" id="nightDir" target="_blank" rel="noopener">Walking directions</a>
   </div>
   <div class="nightnext" id="nightNext"></div>
@@ -437,6 +453,11 @@ const VENUES = RAW.map((r,i) => ({
   address:[r[4],r[5]].filter(Boolean).join(", ")
 }));
 const HAS_FOOD = VENUES.some(v => v.kind === 4);
+
+const DARES=["Ask the bartender what they'd order if they were off the clock, then order it.", "Start a conversation with a stranger and find out their name and where they're from.", "Speak only in questions until the group leaves this venue.", "Take a group photo with the most interesting thing on the walls here.", "Compliment three strangers, sincerely, before you leave.", "Do your best impression of someone in the group. They choose who.", "Find out the oldest thing in this venue and report back to the group.", "Swap one accessory with someone in the group until the next stop.", "Tell the group a true story about yourself they've never heard.", "Learn the bartender's name and use it every time you order tonight.", "Order something for the group without asking anyone what they want.", "Speak in an accent of the group's choosing until you leave here.", "Ask a local for their favourite pub in Brisbane and add it to the list.", "Give the group a two-minute tour of this venue as if you own the place.", "Guess how many people are in this venue. Closest guess in the group wins.", "Order a snack you have never tried before and share it around.", "Nominate someone to pick the next venue. Their call is final.", "Find the best-lit corner in here and get a photo of the whole group.", "Ask staff to play one song, whatever they choose, and dance to at least ten seconds of it.", "Work out the quickest route to the next stop without looking at your phone."];
+const TRIVIA=[["Which Brisbane bridge can you climb to the top of?", "The Story Bridge."], ["What was the early colonial name for the Brisbane settlement?", "Edenglassie."], ["Which World Expo did Brisbane host, and in what year?", "World Expo 88, in 1988."], ["What is Brisbane's inner-city beach called?", "Streets Beach, at South Bank."], ["What are Brisbane's river ferries called?", "CityCats, along with the smaller CityHoppers."], ["Which Summer Olympics is Brisbane hosting?", "The 2032 Games."], ["What is the tallest building in Brisbane?", "Brisbane Skytower, on Margaret Street."], ["Which Brisbane street fills with pubs before a game at Suncorp Stadium?", "Caxton Street."], ["What was Suncorp Stadium originally known as?", "Lang Park."], ["Which lookout gives the classic free view over the Brisbane CBD?", "Mount Coot-tha."], ["Which Brisbane hotel is best known for its steaks?", "The Breakfast Creek Hotel."], ["Which rugby league club plays its home games at Suncorp Stadium?", "The Brisbane Broncos."], ["Which river runs through the Brisbane CBD?", "The Brisbane River."], ["Which Brisbane suburb is home to the Chinatown Mall?", "Fortitude Valley."], ["What is the name of the botanic gardens at the CBD's river bend?", "The City Botanic Gardens."]];
+const LIKELY=["lose their phone tonight", "still be talking to the bartender twenty minutes from now", "suggest one more venue when everyone else is ready for home", "be first to order food", "take the most photos tonight", "start a conversation with a complete stranger", "know the name of every song that plays", "leave something behind at a venue", "organise the next crawl", "find the best seat in every venue", "be the last one standing", "befriend a dog on the walk to the next stop", "take the longest to decide what to order", "get the group lost between here and the next stop", "be first to suggest a taxi home", "end up wearing someone else's jacket", "know the history of the pub you're standing in", "text someone they probably shouldn't", "remember the least about tonight tomorrow", "insist they know a shortcut"];
+const GAME_LABEL={dare:"Dare",trivia:"Trivia",likely:"Most likely to",dice:"Dice roll",custom:"Your challenge"};
 
 const BRISBANE = [-27.4698,153.0251];
 const OSRM = "https://routing.openstreetmap.de/routed-foot/route/v1/foot/";
@@ -568,13 +589,33 @@ async function jumpTo(q){
   }catch(e){ notice("findNotice","Place lookup unavailable. Pan the map manually instead."); }
 }
 
+/* ---------------- mini games ---------------- */
+const openExtras = new Set();
+const pick = a => a[Math.floor(Math.random()*a.length)];
+function rollGame(t){
+  if (t === "trivia"){ const q = pick(TRIVIA); return { t, x:q[0], a:q[1] }; }
+  if (t === "dare")   return { t, x:pick(DARES) };
+  if (t === "likely") return { t, x:pick(LIKELY) };
+  return { t };
+}
+function setGame(i, t){
+  const v = stops()[i];
+  if (!t) v.game = null;
+  else if (t === "custom") v.game = { t, x:(v.game && v.game.x) || "" };
+  else if (t === "dice") v.game = { t };
+  else v.game = rollGame(t);
+  openExtras.add(i);
+  save(); drawSpine(); drawStops();
+  $("shareBox").hidden = true;
+}
+
 /* ---------------- stop operations ---------------- */
 function addStop(v){
   if (inCrawl(v.id)) return;
   stops().push({ ...v, notes:"", stay:DEFAULT_STAY });
   afterChange();
 }
-function removeStop(i){ stops().splice(i,1); afterChange(); }
+function removeStop(i){ stops().splice(i,1); openExtras.clear(); afterChange(); }
 function removeById(id){
   const i = stops().findIndex(v => v.id === id);
   if (i > -1) removeStop(i);
@@ -583,6 +624,7 @@ function moveStop(from,to){
   const s = stops();
   if (to < 0 || to >= s.length) return;
   const [v] = s.splice(from,1); s.splice(to,0,v);
+  openExtras.clear();
   afterChange();
 }
 function redraw(){ drawResults(); drawSpine(); drawStops(); drawRoute(); updateTotals(); }
@@ -655,7 +697,9 @@ function drawSpine(){
   let html = "";
   s.forEach((v,i) => {
     const stay = v.stay ?? DEFAULT_STAY;
-    const hasNote = !!(v.notes && v.notes.trim());
+    const g = v.game;
+    const hasExtra = !!(v.notes && v.notes.trim()) || !!g;
+    const open = hasExtra || openExtras.has(i);
     html += `<div class="stop" data-i="${i}">
       <div class="pin">${i+1}</div>
       <div class="card">
@@ -678,15 +722,27 @@ function drawSpine(){
             <span>${stay} min</span>
             <button data-stay="${i}" data-d="15" aria-label="More time here">+</button>
           </span>
-          <button class="notebtn ${hasNote?"has":""}" data-note="${i}">${hasNote?"Notes ✓":"Add notes"}</button>
+          <button class="notebtn ${hasExtra?"has":""}" data-note="${i}">${hasExtra?"Notes ✓":"Notes & game"}</button>
         </div>
         <div class="acts">
           <button class="act" data-up="${i}" ${i===0?"disabled":""} aria-label="Move ${esc(v.name)} earlier"><span class="gl">▲</span>Earlier</button>
           <button class="act" data-down="${i}" ${i===s.length-1?"disabled":""} aria-label="Move ${esc(v.name)} later"><span class="gl">▼</span>Later</button>
           <button class="act kill" data-del="${i}" aria-label="Remove ${esc(v.name)} from the crawl"><span class="gl x">✕</span>Remove</button>
         </div>
-        <textarea data-notes="${i}" placeholder="Dress code, who's meeting you, booking name, drink specials…"
-          ${hasNote?"":"hidden"}>${esc(v.notes||"")}</textarea>
+        <div class="extras" ${open?"":"hidden"}>
+          <textarea data-notes="${i}" placeholder="Dress code, who's meeting you, booking name, drink specials…">${esc(v.notes||"")}</textarea>
+          <label class="lbl">Mini game</label>
+          <select data-gtype="${i}">
+            ${["","dare","trivia","likely","dice","custom"].map(t =>
+              `<option value="${t}" ${((g&&g.t)||"")===t?"selected":""}>${t?GAME_LABEL[t]:"No game"}</option>`).join("")}
+          </select>
+          ${!g ? "" : g.t === "custom"
+            ? `<input type="text" data-gcustom="${i}" placeholder="Write the challenge for this stop" value="${esc(g.x||"")}">`
+            : g.t === "dice"
+              ? `<p class="gpreview">Everyone rolls. Lowest roll does the honours.</p>`
+              : `<p class="gpreview">${esc(g.t==="likely" ? "Most likely to "+g.x : g.x)}${g.a?`<br><span class="gans">${esc(g.a)}</span>`:""}</p>
+                 <button class="gshuffle" data-gshuffle="${i}">Shuffle for a different one</button>`}
+        </div>
       </div>
     </div>`;
     const leg = i < s.length-1 ? legInfo(i) : null;
@@ -778,14 +834,15 @@ const byId = new Map(VENUES.map(v => [v.id, v]));
 function packCrawl(c){
   return { n:c.name, d:c.date, s:c.start,
     p:c.stops.map(v => [v.id, v.name, +v.lat.toFixed(5), +v.lon.toFixed(5),
-      v.kind, v.notes || "", v.stay ?? DEFAULT_STAY]) };
+      v.kind, v.notes || "", v.stay ?? DEFAULT_STAY, v.game || 0]) };
 }
 function unpackCrawl(o){
   return { id:uid(), name:o.n || "Shared crawl", date:o.d || "", start:o.s || "19:00",
     stops:(o.p || []).map(r => {
       const known = byId.get(r[0]);
       return { id:r[0], name:r[1], lat:r[2], lon:r[3], kind:r[4] ?? 1,
-        address: known ? known.address : "", notes:r[5] || "", stay:r[6] ?? DEFAULT_STAY };
+        address: known ? known.address : "", notes:r[5] || "", stay:r[6] ?? DEFAULT_STAY,
+        game: r[7] || null };
     }) };
 }
 const b64u = bytes => {
@@ -885,9 +942,39 @@ function renderNight(){
   $("nightNext").innerHTML = next
     ? `Then <b>${esc(next.name)}</b> · ${metres(leg.distance)}, ${mins(leg.duration)} walk`
     : "Last stop of the night. Sort a ride home before you settle in.";
+  renderNightGame(v.game);
   $("nightPrev").disabled = i === 0;
   $("nightGo").textContent = next ? "Next stop" : "Finish";
 }
+function renderNightGame(g){
+  const el = $("nightGame");
+  if (!g){ el.hidden = true; el.innerHTML = ""; return; }
+  el.hidden = false;
+  const head = `<span class="glabel">${GAME_LABEL[g.t]}</span>`;
+  if (g.t === "trivia"){
+    el.innerHTML = head + `<p class="gtext">${esc(g.x)}</p>
+      <button class="btn ghost" id="gBtn">Show the answer</button>`;
+    $("gBtn").onclick = () => {
+      el.innerHTML = head + `<p class="gtext">${esc(g.x)}</p><p class="greveal">${esc(g.a)}</p>`;
+    };
+  } else if (g.t === "dice"){
+    const roll = () => {
+      const n = 1 + Math.floor(Math.random()*6);
+      el.innerHTML = head + `<p class="gtext">Everyone rolls. Lowest does the honours.</p>
+        <span class="gdie">${n}</span><button class="btn ghost" id="gBtn">Roll again</button>`;
+      $("gBtn").onclick = roll;
+    };
+    el.innerHTML = head + `<p class="gtext">Everyone rolls. Lowest does the honours.</p>
+      <button class="btn ghost" id="gBtn">Roll</button>`;
+    $("gBtn").onclick = roll;
+  } else {
+    const text = g.t === "likely" ? "Most likely to " + g.x : g.x;
+    if (!text){ el.hidden = true; el.innerHTML = ""; return; }
+    el.innerHTML = head + `<button class="btn ghost" id="gBtn">Reveal</button>`;
+    $("gBtn").onclick = () => { el.innerHTML = head + `<p class="greveal">${esc(text)}</p>`; };
+  }
+}
+
 function nightStep(d){
   const c = active(), s = stops();
   const i = cursor() + d;
@@ -1099,24 +1186,45 @@ $("spine").addEventListener("click", e => {
     save(); drawSpine(); drawStops(); updateTotals();
   }
   else if (t.dataset.note != null){
-    const ta = $("spine").querySelector(`[data-notes="${t.dataset.note}"]`);
-    if (ta){ ta.hidden = !ta.hidden; if (!ta.hidden) ta.focus(); }
+    const i = +t.dataset.note;
+    const box = t.closest(".card").querySelector(".extras");
+    if (box){
+      box.hidden = !box.hidden;
+      if (box.hidden) openExtras.delete(i); else { openExtras.add(i); box.querySelector("textarea").focus(); }
+    }
+  }
+  else if (t.dataset.gshuffle != null){
+    const i = +t.dataset.gshuffle, v = stops()[i];
+    v.game = rollGame(v.game.t);
+    openExtras.add(i);
+    save(); drawSpine(); $("shareBox").hidden = true;
   }
   else if (t.dataset.pan != null){
     const v = stops()[+t.dataset.pan];
     if (v) map.setView([v.lat,v.lon], Math.max(map.getZoom(),16));
   }
 });
-/* notes typing must not trigger a redraw, or focus is lost */
+$("spine").addEventListener("change", e => {
+  const sel = e.target.closest("[data-gtype]"); if (!sel) return;
+  setGame(+sel.dataset.gtype, sel.value);
+});
+
+/* typing must not trigger a redraw, or focus is lost */
 $("spine").addEventListener("input", e => {
+  const cust = e.target.closest("[data-gcustom]");
+  if (cust){
+    const v = stops()[+cust.dataset.gcustom];
+    if (v && v.game){ v.game.x = cust.value; save(); }
+    return;
+  }
   const ta = e.target.closest("[data-notes]"); if (!ta) return;
   const v = stops()[+ta.dataset.notes]; if (!v) return;
   v.notes = ta.value;
   const btn = ta.closest(".card").querySelector("[data-note]");
   if (btn){
-    const has = !!v.notes.trim();
+    const has = !!v.notes.trim() || !!v.game;
     btn.classList.toggle("has", has);
-    btn.textContent = has ? "Notes ✓" : "Add notes";
+    btn.textContent = has ? "Notes ✓" : "Notes & game";
   }
   save();
 });
