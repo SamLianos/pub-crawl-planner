@@ -185,6 +185,43 @@ select{cursor:pointer}
 .notice{margin:0 var(--pad) 10px;padding:9px 12px;border-radius:var(--r);font-size:12.5px;
   background:var(--raise);border:1px solid var(--line);color:var(--dim)}
 
+.startbar{position:sticky;bottom:0;padding:12px var(--pad) 14px;
+  background:linear-gradient(to top,var(--panel) 62%,rgba(20,38,31,0))}
+.startbar .btn{width:100%;padding:14px;font-size:15px}
+
+.night{position:fixed;inset:0;z-index:3000;background:var(--ink);display:none;flex-direction:column}
+.night.on{display:flex}
+.nightbar{display:flex;align-items:center;gap:12px;padding:14px 18px;flex:0 0 auto}
+.nightcrawl{flex:1;min-width:0;font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+  font-weight:700;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nightexit{background:none;border:1px solid var(--line);border-radius:20px;color:var(--dim);
+  padding:6px 15px;font-size:12.5px;font-weight:600}
+.nightexit:hover{background:var(--raise);color:var(--bone)}
+.nightprog{height:3px;background:var(--raise);flex:0 0 auto}
+.nightprog span{display:block;height:100%;background:var(--amber);transition:width .3s ease}
+.nightbody{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:22px 26px;gap:11px;overflow-y:auto;min-height:0}
+.nightcount{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);font-weight:700}
+.nightpin{width:74px;height:74px;border-radius:50%;background:var(--amber);color:#231204;
+  font-family:var(--display);font-size:34px;display:grid;place-items:center;line-height:1;
+  box-shadow:0 0 0 7px rgba(240,169,60,.12)}
+.nightname{font-family:var(--display);font-size:30px;line-height:1.15;margin:4px 0 0;font-weight:400}
+.nightsub{margin:0;color:var(--dim);font-size:14px}
+.nightlate{margin:0;font-size:13px;font-weight:700;color:var(--claret)}
+.nightlate:empty{display:none}
+.nightnotes{margin:6px 0 0;max-width:34em;font-size:15px;line-height:1.6;color:var(--bone);
+  background:var(--raise);border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;
+  text-align:left;white-space:pre-wrap}
+.nightnotes:empty{display:none}
+.nightdir{margin-top:6px;text-decoration:none;display:inline-block}
+.nightnext{flex:0 0 auto;padding:14px 22px;border-top:1px solid var(--line);text-align:center;
+  font-size:13px;color:var(--dim)}
+.nightnext b{color:var(--bone)}
+.nightnav{flex:0 0 auto;display:flex;gap:10px;padding:14px 18px calc(18px + env(safe-area-inset-bottom))}
+.nightnav .btn{flex:1;padding:16px;font-size:15px}
+.nightnav .btn.ghost{flex:0 0 34%}
+@media (max-width:400px){ .nightname{font-size:25px} .nightpin{width:64px;height:64px;font-size:29px} }
+
 .footnote{padding:12px var(--pad);border-top:1px solid var(--line);font-size:10.5px;
   line-height:1.6;color:#63756B;flex:0 0 auto}
 .footnote a{color:var(--brass)}
@@ -351,6 +388,9 @@ select{cursor:pointer}
         </div>
         <div id="crawlNotice"></div>
         <div class="spine" id="spine"></div>
+        <div class="startbar" id="startBar" hidden>
+          <button class="btn" id="btnStart">Start the night</button>
+        </div>
       </section>
 
       <div class="footnote">
@@ -361,6 +401,28 @@ select{cursor:pointer}
         A venue wrong or missing? <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener">Fix the map</a>.
       </div>
     </aside>
+  </div>
+</div>
+
+<div class="night" id="night" role="dialog" aria-modal="true" aria-label="Night out mode">
+  <div class="nightbar">
+    <span class="nightcrawl" id="nightCrawl"></span>
+    <button class="nightexit" id="nightExit">Exit</button>
+  </div>
+  <div class="nightprog"><span id="nightBar"></span></div>
+  <div class="nightbody">
+    <div class="nightcount" id="nightCount"></div>
+    <div class="nightpin" id="nightPin">1</div>
+    <h1 class="nightname" id="nightName"></h1>
+    <p class="nightsub" id="nightSub"></p>
+    <p class="nightlate" id="nightLate"></p>
+    <p class="nightnotes" id="nightNotes"></p>
+    <a class="btn ghost nightdir" id="nightDir" target="_blank" rel="noopener">Walking directions</a>
+  </div>
+  <div class="nightnext" id="nightNext"></div>
+  <div class="nightnav">
+    <button class="btn ghost" id="nightPrev">Back</button>
+    <button class="btn" id="nightGo">Next stop</button>
   </div>
 </div>
 
@@ -671,6 +733,10 @@ function updateTotals(){
   $("tStops").textContent = s.length;
   $("tabCount").textContent = s.length;
   $("tEnd").textContent = s.length ? clock(sch[s.length-1].leave) : "—";
+  $("startBar").hidden = !s.length;
+  if ($("night").classList.contains("on")){
+    if (!s.length) closeNight(); else renderNight();
+  }
   if (s.length < 2){ $("tDist").textContent="—"; $("tTime").textContent="—"; return; }
   let d=0,t=0;
   for (let i=0;i<s.length-1;i++){ const l=legInfo(i); if(l){ d+=l.distance; t+=l.duration; } }
@@ -779,6 +845,82 @@ async function importFromHash(){
     return "bad";
   }
 }
+
+/* ---------------- night out mode ----------------
+   Big targets, one decision at a time, and the screen kept awake. */
+let wakeLock = null;
+async function keepAwake(on){
+  try{
+    if (on && "wakeLock" in navigator) wakeLock = await navigator.wakeLock.request("screen");
+    else if (wakeLock){ await wakeLock.release(); wakeLock = null; }
+  }catch(e){ /* unsupported or refused, not worth bothering the user about */ }
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && $("night").classList.contains("on")) keepAwake(true);
+});
+
+const cursor = () => Math.min(active()?.cursor || 0, Math.max(stops().length - 1, 0));
+
+function renderNight(){
+  const s = stops(), i = cursor(), v = s[i], sch = schedule();
+  if (!v) return;
+  $("nightCrawl").textContent = active().name;
+  $("nightCount").textContent = `Stop ${i+1} of ${s.length}`;
+  $("nightBar").style.width = (((i+1)/s.length)*100).toFixed(1) + "%";
+  $("nightPin").textContent = i+1;
+  $("nightName").textContent = v.name;
+  $("nightSub").textContent = `${KIND_LABEL[v.kind] || "Spot"}${v.address ? " · " + v.address : ""} · due ${clock(sch[i].arrive)}`;
+  $("nightNotes").textContent = v.notes || "";
+  $("nightDir").href = `https://www.google.com/maps/dir/?api=1&destination=${v.lat},${v.lon}&travelmode=walking`;
+
+  /* only meaningful if tonight is the night */
+  const today = new Date();
+  const iso = new Date(today.getTime() - today.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  let late = "";
+  if (active().date === iso){
+    const nowMin = today.getHours()*60 + today.getMinutes();
+    const drift = Math.round(nowMin - sch[i].arrive);
+    if (drift > 15) late = `Running about ${mins(drift*60)} behind schedule`;
+    else if (drift < -15) late = `About ${mins(-drift*60)} ahead of schedule`;
+  }
+  $("nightLate").textContent = late;
+
+  const next = s[i+1], leg = next ? legInfo(i) : null;
+  $("nightNext").innerHTML = next
+    ? `Then <b>${esc(next.name)}</b> · ${metres(leg.distance)}, ${mins(leg.duration)} walk`
+    : "Last stop of the night. Sort a ride home before you settle in.";
+  $("nightPrev").disabled = i === 0;
+  $("nightGo").textContent = next ? "Next stop" : "Finish";
+}
+function nightStep(d){
+  const c = active(), s = stops();
+  const i = cursor() + d;
+  if (i >= s.length){ closeNight(); return; }
+  c.cursor = Math.max(0, i); save(); renderNight();
+}
+function openNight(){
+  if (!stops().length) return;
+  const c = active();
+  if (typeof c.cursor !== "number" || c.cursor >= c.stops.length) c.cursor = 0;
+  save();
+  $("night").classList.add("on");
+  renderNight();
+  keepAwake(true);
+}
+function closeNight(){
+  $("night").classList.remove("on");
+  keepAwake(false);
+}
+$("btnStart").onclick = openNight;
+$("nightExit").onclick = closeNight;
+$("nightPrev").onclick = () => nightStep(-1);
+$("nightGo").onclick = () => nightStep(1);
+document.addEventListener("keydown", e => {
+  if (!$("night").classList.contains("on")) return;
+  if (e.key === "Escape") closeNight();
+  if (e.key === "ArrowRight") nightStep(1);
+  if (e.key === "ArrowLeft") nightStep(-1);
+});
 
 /* ---------------- tabs ---------------- */
 function selectTab(which){
