@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Last Drinks · Brisbane crawl planner</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0D1A15; --panel:#14261F; --raise:#1D362C; --raise-lit:#27473A;
+  --line:#2E5245; --bone:#EFE7D6; --dim:#9DAFA4;
+  --amber:#F0A93C; --claret:#C4544D; --brass:#9C8148;
+  --r:10px; --pad:16px;
+  --display:"Alfa Slab One",Georgia,serif;
+  --body:"Archivo",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--ink);color:var(--bone);font-family:var(--body);
+  font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:4px}
+::-webkit-scrollbar{width:10px}
+::-webkit-scrollbar-track{background:var(--panel)}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}
+
+.app{display:flex;flex-direction:column;height:100dvh}
+.topbar{display:flex;align-items:center;gap:14px;padding:10px 18px;
+  background:var(--panel);border-bottom:1px solid var(--line);flex:0 0 auto}
+.wordmark{font-family:var(--display);font-size:20px;color:var(--bone);line-height:1;white-space:nowrap}
+.wordmark span{color:var(--amber)}
+.tagline{font-size:12px;color:var(--dim);border-left:1px solid var(--line);padding-left:14px}
+.totals{margin-left:auto;display:flex;gap:18px;align-items:baseline}
+.total{text-align:right}
+.total b{display:block;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;
+  color:var(--amber);line-height:1.15}
+.total i{font-style:normal;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+
+.body{flex:1 1 auto;display:flex;min-height:0}
+.maprap{position:relative;flex:1 1 auto;min-width:0;display:flex}
+#map{flex:1 1 auto;min-width:0;background:var(--ink)}
+.panel{flex:0 0 400px;background:var(--panel);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;min-height:0}
+
+.tabs{display:flex;flex:0 0 auto;border-bottom:1px solid var(--line)}
+.tab{flex:1;background:none;border:0;padding:13px 8px;font-size:12px;font-weight:600;
+  letter-spacing:.13em;text-transform:uppercase;color:var(--dim);
+  border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
+.tab[aria-selected="true"]{color:var(--bone);border-bottom-color:var(--amber)}
+.tab .count{display:inline-block;margin-left:6px;background:var(--amber);color:var(--ink);
+  border-radius:20px;padding:1px 7px;font-size:11px;font-weight:700;letter-spacing:0}
+.pane{flex:1 1 auto;overflow-y:auto;min-height:0;display:none}
+.pane.on{display:block}
+
+.search{padding:var(--pad);border-bottom:1px solid var(--line);display:grid;gap:10px}
+input[type=text]{width:100%;background:var(--ink);border:1px solid var(--line);color:var(--bone);
+  padding:10px 12px;border-radius:var(--r);font-family:inherit;font-size:14px}
+input[type=text]::placeholder{color:#63756B}
+input[type=text]:focus{outline:none;border-color:var(--amber)}
+.btn{background:var(--amber);color:#231204;border:0;border-radius:var(--r);padding:10px 16px;
+  font-weight:700;font-size:14px;white-space:nowrap;transition:background .15s}
+.btn:hover{background:#FFBE5A}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--bone);font-weight:500}
+.btn.ghost:hover{background:var(--raise)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--ink);border:1px solid var(--line);color:var(--dim);border-radius:20px;
+  padding:5px 12px;font-size:12px;font-weight:500;transition:all .15s}
+.chip[aria-pressed="true"]{background:var(--raise-lit);border-color:var(--brass);color:var(--bone)}
+.hint{font-size:12px;color:var(--dim);margin:0}
+.hint a{color:var(--amber);cursor:pointer;text-decoration:underline}
+
+.list{padding:10px var(--pad) 40px}
+.result{display:flex;align-items:flex-start;gap:12px;width:100%;text-align:left;
+  background:var(--raise);border:1px solid transparent;border-radius:var(--r);
+  padding:11px 12px;margin-bottom:7px;transition:border-color .15s,background .15s}
+.result:hover{background:var(--raise-lit);border-color:var(--line)}
+.result.added{opacity:.45}
+.result .meta{flex:1;min-width:0}
+.result .nm{font-weight:600;font-size:14px;display:block;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.result .sub{font-size:12px;color:var(--dim);display:block;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.kind{font-size:9px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--brass);
+  border:1px solid var(--line);border-radius:4px;padding:2px 5px;flex:0 0 auto;margin-top:2px}
+.plus{flex:0 0 auto;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);
+  background:var(--ink);color:var(--amber);font-size:19px;display:grid;place-items:center}
+.result:hover .plus{background:var(--amber);color:var(--ink);border-color:var(--amber)}
+
+.spine{padding:14px var(--pad) 60px}
+.stop{display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:start}
+.stop.drag{opacity:.35}
+.stop.over .card{border-color:var(--amber)}
+.pin{width:44px;height:44px;border-radius:50%;background:var(--amber);color:#231204;
+  font-family:var(--display);font-size:19px;display:grid;place-items:center;line-height:1;
+  box-shadow:0 0 0 4px rgba(240,169,60,.13)}
+.card{background:var(--raise);border:1px solid var(--line);border-radius:var(--r);
+  padding:11px 12px;display:flex;gap:10px;align-items:flex-start}
+.card .meta{flex:1;min-width:0;cursor:pointer}
+.card .nm{font-weight:600;font-size:15px;display:block}
+.card .sub{font-size:12px;color:var(--dim);display:block;margin-top:1px}
+.acts{display:flex;flex-direction:column;gap:3px;flex:0 0 auto}
+.icon{background:none;border:0;color:var(--dim);width:26px;height:22px;display:grid;
+  place-items:center;border-radius:5px;font-size:13px;line-height:1}
+.icon:hover{background:var(--raise-lit);color:var(--bone)}
+.icon.kill:hover{background:rgba(196,84,77,.16);color:var(--claret)}
+.icon:disabled{opacity:.22;cursor:not-allowed;background:none}
+.grip{cursor:grab;color:var(--brass)}
+
+.leg{display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:center}
+.legline{height:34px;width:0;border-left:2px dashed var(--brass);margin-left:21px;opacity:.75}
+.legtxt{font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+.legtxt b{color:var(--bone);font-weight:600}
+.legtxt.approx{color:#6E8175;font-style:italic}
+
+.empty{padding:38px 26px;text-align:center;color:var(--dim)}
+.empty h2{font-family:var(--display);font-size:17px;color:var(--bone);margin:0 0 8px;
+  font-weight:400;line-height:1.35}
+.empty p{margin:0;font-size:13px;line-height:1.6}
+.notice{margin:0 var(--pad) 10px;padding:9px 12px;border-radius:var(--r);font-size:12.5px;
+  background:var(--raise);border:1px solid var(--line);color:var(--dim)}
+
+.footnote{padding:12px var(--pad);border-top:1px solid var(--line);font-size:10.5px;
+  line-height:1.6;color:#63756B;flex:0 0 auto}
+.footnote a{color:var(--brass)}
+
+.leaflet-container{background:var(--ink);font-family:var(--body)}
+.leaflet-control-attribution{background:rgba(13,26,21,.86)!important;color:#7C8F84!important;font-size:10px!important}
+.leaflet-control-attribution a{color:var(--brass)!important}
+.leaflet-bar a{background:var(--panel)!important;color:var(--bone)!important;border-bottom-color:var(--line)!important}
+.leaflet-bar a:hover{background:var(--raise-lit)!important}
+.numpin{width:32px;height:32px;border-radius:50%;background:var(--amber);color:#231204;
+  font-family:var(--display);font-size:15px;display:grid;place-items:center;
+  border:2px solid #231204;box-shadow:0 2px 8px rgba(0,0,0,.55)}
+.dot{width:13px;height:13px;border-radius:50%;background:var(--panel);border:2px solid var(--bone);
+  box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--raise);color:var(--bone);border-radius:var(--r)}
+.leaflet-popup-content{margin:11px 13px;font-size:13px}
+.leaflet-popup-content .pnm{font-weight:700;display:block;margin-bottom:2px}
+.leaflet-popup-content .psub{color:var(--dim);font-size:11.5px;display:block;margin-bottom:8px}
+.leaflet-popup-content .btn{padding:6px 12px;font-size:12.5px}
+.leaflet-popup-close-button{color:var(--dim)!important}
+.maptools{position:absolute;z-index:600;left:50%;transform:translateX(-50%);bottom:22px;display:flex;gap:8px}
+.maptools .btn{box-shadow:0 4px 16px rgba(0,0,0,.5)}
+
+@media (max-width:860px){
+  .body{flex-direction:column}
+  .maprap{flex:0 0 42dvh}
+  .panel{flex:1 1 auto;border-right:0;border-top:1px solid var(--line);width:100%}
+  .tagline{display:none}
+  .topbar{padding:9px 14px;gap:10px}
+  .wordmark{font-size:17px}
+  .total b{font-size:15px}
+  .maptools{bottom:14px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="wordmark">LAST <span>DRINKS</span></div>
+    <div class="tagline">Brisbane crawl planner</div>
+    <div class="totals">
+      <div class="total"><b id="tStops">0</b><i>stops</i></div>
+      <div class="total"><b id="tDist">—</b><i>on foot</i></div>
+      <div class="total"><b id="tTime">—</b><i>walking</i></div>
+    </div>
+  </header>
+
+  <div class="body">
+    <div class="maprap">
+      <div id="map"></div>
+      <div class="maptools">
+        <button class="btn ghost" id="btnPin">Add a spot</button>
+        <button class="btn ghost" id="btnFit">Fit crawl</button>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <div class="tabs" role="tablist">
+        <button class="tab" id="tabFind" role="tab" aria-selected="true">Find venues</button>
+        <button class="tab" id="tabCrawl" role="tab" aria-selected="false">The crawl<span class="count" id="tabCount">0</span></button>
+      </div>
+
+      <section class="pane on" id="paneFind" role="tabpanel">
+        <div class="search">
+          <input type="text" id="q" placeholder="Search a venue, or a suburb to jump to" autocomplete="off">
+          <div class="chips" id="chips">
+            <button class="chip" data-k="0" aria-pressed="true">Pubs</button>
+            <button class="chip" data-k="1" aria-pressed="true">Bars</button>
+            <button class="chip" data-k="2" aria-pressed="true">Clubs</button>
+            <button class="chip" data-k="3" aria-pressed="true">Breweries</button>
+          </div>
+          <p class="hint" id="hint"></p>
+        </div>
+        <div id="findNotice"></div>
+        <div class="list" id="results"></div>
+      </section>
+
+      <section class="pane" id="paneCrawl" role="tabpanel">
+        <div id="crawlNotice"></div>
+        <div class="spine" id="spine"></div>
+      </section>
+
+      <div class="footnote">
+        Venue data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>
+        contributors under ODbL, extracted <span id="stamp"></span>.
+        Basemap © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>.
+        Walking routes by <a href="https://routing.openstreetmap.de/about.html" target="_blank" rel="noopener">OSRM / FOSSGIS</a>.
+        A venue wrong or missing? <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener">Fix the map</a>.
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+"use strict";
+
+/* Brisbane venues, bundled at build time from OpenStreetMap.
+   Shape: [name, lat, lon, kindIndex, street, suburb] */
+const DATA_STAMP = "20 August 2026";
+const RAW = [["1603 Bar",-27.469154,153.021073,1,"27 Turbot Street",""],["88 BILLIARDS",-27.478445,153.012311,1,"115 Boundary Street",""],["Acai Bros. Superfood",-27.506691,152.948461,1,"",""],["Albany Creek Tavern",-27.345718,152.966031,0,"",""],["Albion Hotel",-27.42961,153.041624,0,"300 Sandgate Road","Albion"],["Alderley Arms Hotel",-27.425545,153.000645,0,"2 Samford Road","Alderley"],["Alderley Arms Hotel",-27.425622,153.000622,0,"2 Samford Road","Alderley"],["Alexandra Hills Hotel",-27.523526,153.236779,0,"332 Finucane Road","Alexandra Hills"],["Ambassador Hotel",-27.229708,153.115994,0,"",""],["ANFE Italian Club",-27.409348,153.011029,0,"429 Stafford Road","Stafford"],["Antico",-27.469651,153.024246,1,"48 Burnett Lane",""],["Aquitaine",-27.480894,153.025477,1,"",""],["Arana Leagues Club",-27.399614,152.961715,0,"247",""],["Archer Brewing",-27.436057,153.015435,0,"278 Newmarket Road","Wilston"],["Archive",-27.479027,153.012566,0,"",""],["Aspley Hornets Club",-27.355768,153.012575,0,"",""],["Australian National Hotel",-27.487412,153.040006,0,"Stanley Street",""],["Bacchus Brewing Co.",-27.531143,153.204761,0,"2 Christine Place","Capalaba"],["Baedeker Wine Bar",-27.455065,153.035285,1,"111 Constance Street",""],["Ballistic Beer Company",-27.548411,153.031851,0,"55 McCarthy Road","Salisbury"],["Bao Bar",-27.477587,153.014061,1,"",""],["Bar Alto",-27.469386,153.054326,1,"",""],["Bar Bossa",-27.478434,153.021755,1,"",""],["Bar Brutus",-27.473811,153.017786,1,"49 Melbourne Street","South Brisbane"],["Bar Cooper's",-27.503874,153.068889,1,"321 Chatsworth Road",""],["Bar Gusto",-27.451418,153.032113,1,"",""],["Bar Pacino",-27.46564,153.030797,1,"175 Eagle Street",""],["Barbara Club",-27.457073,153.034354,1,"",""],["Beach House",-27.677648,152.902306,1,"",""],["Beenleigh Tavern",-27.72261,153.219109,0,"",""],["Beerhaus",-27.451337,153.032684,1,"",""],["Bellbowrie Sports and Recreation Club Inc",-27.564371,152.890872,0,"",""],["Bellbowrie Tavern",-27.56241,152.887196,0,"",""],["Belmont Tavern",-27.484562,153.126002,0,"185 Belmont Road",""],["Belvedere Hotel",-27.262205,153.103915,1,"",""],["Beyond The Pale",-27.494221,153.058771,0,"",""],["Bird in the Hand Wine Bar",-27.444085,153.080778,1,"",""],["Birdees",-27.459392,153.033732,1,"",""],["Birkdale Tavern",-27.492303,153.217404,0,"180 Birkdale Road","Birkdale"],["Black Bear Lodge",-27.45798,153.034825,1,"322 Brunswick Street","Fortitude Valley"],["Blind Tiger",-27.445199,152.952638,1,"1000 Waterworks Road","The Gap"],["Blind Tiger Bar",-27.451558,153.061442,1,"204 Oxford Street","Bulimba"],["Blutes",-27.458176,153.034818,1,"322 Brunswick Street",""],["Bosc",-27.48091,153.010676,1,"69 Vulture Street",""],["Bossa Latina",-27.532286,153.014473,2,"46 Evesham Street","Moorooka"],["Botanic Bar",-27.47829,153.029434,1,"",""],["Bourbon St",-27.480234,153.022934,1,"",""],["Breakfast Creek Hotel",-27.440741,153.045669,0,"",""],["Brendale Brewing Co",-27.316542,152.977531,0,"62 Kremzow Road","Brendale"],["Brew",-27.469089,153.025121,1,"North Burnett Lane","Brisbane City"],["BrewDog",-27.456814,153.032664,0,"",""],["Brewdog",-27.448394,153.100007,0,"",""],["Brewhouse Brisbane",-27.485805,153.029294,0,"601 Stanley Street","Woolloongabba"],["Brewski",-27.464504,153.012556,0,"22 Caxton Street","Petrie Terrace"],["Brighton Hotel",-27.305406,153.062364,0,"196 Brighton Terrace",""],["Brisbane Brewing Co",-27.480054,153.012457,0,"124 Boundary Street","West End"],["Brisbane German Club",-27.484394,153.03682,0,"416 Vulture Street",""],["Brisbane Jazz Club",-27.466231,153.034053,1,"1 Annie Street","Kangaroo Point"],["Browns Plains Hotel Motel",-27.660625,153.04326,0,"",""],["Brunswick Hotel",-27.462456,153.039818,0,"",""],["Burrito Bar",-27.479092,153.021663,1,"",""],["Byblos",-27.44125,153.069344,1,"",""],["Calamvale Hotel",-27.612075,153.05241,0,"",""],["Camp Hill Hotel",-27.492297,153.083024,0,"",""],["Can You Keep a Secret",-27.485752,153.029653,1,"619-621 Stanley Street","Woolloongabba"],["Capalaba Tavern",-27.519768,153.189811,0,"",""],["Captain Cook Tavern",-27.226155,153.089052,0,"",""],["Carina Leagues Club",-27.491846,153.101113,0,"1390 Creek Road","Carina"],["Caxton Hotel",-27.464162,153.012194,0,"",""],["Caxton Street Brewing Co",-27.464921,153.012991,3,"52 Petrie Terrace",""],["Cedar & Pine Bar",-27.444682,153.174411,1,"139 Bay Terrace","Wynnum"],["Centenary Tavern",-27.562833,152.931592,0,"",""],["Chalk Hotel",-27.486445,153.033407,0,"",""],["Chardons Corner Hotel",-27.518699,153.029325,0,"688 Ipswich Road","Annerley"],["Chatswood Hills Tavern",-27.632817,153.138364,0,"",""],["Cicada Blue",-27.47438,153.024808,1,"",""],["Cloudland",-27.458835,153.034817,1,"",""],["Club Southside",-27.557851,153.083758,0,"76 Mount Gravatt-Capalaba Road","Upper Mount Gravatt"],["Club Vixen",-27.470221,153.024265,2,"",""],["Cobbler",-27.477959,153.013097,1,"",""],["Coffee and Juice Bar",-27.508564,152.93831,1,"",""],["Coorparoo R.S.L. and Community Club",-27.494713,153.0565,0,"",""],["Covent Garden",-27.480571,153.012257,0,"142 Vulture Street","West End"],["Craft Brew House",-27.492145,153.217927,0,"",""],["Criterion",-27.470152,153.023103,0,"",""],["Crow Bar",-27.456937,153.033245,1,"",""],["Crowbar",-27.45772,153.035973,1,"",""],["Crown Hotel",-27.424492,153.033223,0,"446 Lutwyche Road","Lutwyche"],["Cru Bar",-27.455981,153.039159,1,"22 James Street",""],["Daddy",-27.476625,153.008588,1,"208 Montague Road",""],["Dakabin Hotel",-27.227344,152.990759,0,"289 Old Gympie Road","Dakabin"],["Dalgety 2.0 Public House",-27.456358,153.049831,1,"110 Macquarie Street","Teneriffe"],["Dapple + Waver",-27.524548,153.012351,1,"",""],["Dark Shephard",-27.474294,153.025028,1,"",""],["Death and Taxes",-27.469868,153.023896,1,"36 Burnett Lane","Brisbane City"],["Deathproof",-27.464398,153.042393,1,"",""],["Diamands Tavern",-27.249624,152.995826,0,"",""],["Diner Bar",-27.443842,153.079973,1,"",""],["Downunder Bar & Grill",-27.467056,153.025521,0,"",""],["Drift",-27.43343,153.044798,1,"",""],["Drunken Monkey Nightclub and Bottleshop",-27.459203,153.035361,1,"18 McLachlan Street","Fortitude Valley"],["Eagle Tavern",-27.700376,153.212246,0,"166 Fryar Road","Eagleby"],["Eagles Nest",-27.474087,153.036414,1,"21 Lambert Street",""],["Easy Times Brewig Co",-27.487057,153.036834,1,"",""],["Eatons Hill Hotel",-27.338763,152.961757,0,"",""],["Edinburgh Castle Hotel",-27.401595,153.031871,0,"421 Gympie Road",""],["ei8ht",-27.459506,153.034891,2,"8 McLachlan Street",""],["Electric Avenue",-27.487347,153.03659,1,"23 Logan Road",""],["Eleven Rooftop Bar",-27.45698,153.036736,1,"757 Ann Street","Fortitude Valley"],["Elixir Rooftop Bar",-27.458776,153.034548,1,"",""],["Embassy Hotel",-27.469177,153.027404,0,"214 Elizabeth Street",""],["Empire Hotel",-27.45869,153.035045,0,"",""],["Everton Park Hotel",-27.394381,152.995594,0,"",""],["Eye Candy Strip Club",-27.457311,153.03313,2,"249 Brunswick Street",""],["Fat Louie’s",-27.471106,153.026488,1,"",""],["Felons Brewing Co",-27.462414,153.036263,0,"5 Boundary Street",""],["Ferny Grove Tavern",-27.401887,152.936484,0,"1340 Samford Road","Ferny Grove"],["Fin McCools",-27.415417,152.949435,0,"",""],["Fine Isles",-27.457837,153.035503,1,"",""],["Finn McCool's",-27.457851,153.034066,1,"",""],["Firefly",-27.469375,153.02311,0,"",""],["Fitzy's",-27.663285,153.173064,0,"",""],["Fitzys Waterford",-27.692825,153.141714,0,"",""],["Flat Lizard Brewing",-27.418186,153.014956,0,"",""],["Fortitude Music Hall",-27.457896,153.034724,1,"316 Brunswick Street","Fortitude Valley"],["Four-Mile Creek Hotel",-27.307486,152.989419,0,"",""],["Frankie Brown",-27.432142,153.019758,0,"99 Kedron Brook Road","Wilston"],["French Martini",-27.479785,153.022803,1,"",""],["Fridays",-27.467626,153.030674,1,"",""],["Fritzenberger",-27.345262,152.968705,0,"",""],["FryDays Bar & Kitchen",-27.478733,153.012321,1,"123 Boundary Street","West End"],["Full Moon Hotel",-27.321057,153.073655,0,"",""],["Future Magic Brewing Co",-27.481326,153.041581,3,"32 Manilla Street",""],["Gaythorne Bowls Club",-27.415175,152.979771,0,"18 Prospect Road",""],["Geebung RSL",-27.370313,153.04807,0,"",""],["Gertie's",-27.464516,153.042513,1,"699 Brunswick Street","New Farm"],["Gilhooley's",-27.471059,153.026451,0,"",""],["glass",-27.459529,153.036587,1,"",""],["Goldie's Tavern",-27.475255,153.01642,0,"",""],["Goodna Bowls Club/Temporary RSL",-27.606386,152.902865,0,"",""],["GPO",-27.456982,153.036154,1,"740 Ann Street",""],["Grand Central Hotel",-27.466162,153.02602,0,"270 Ann Street","Brisbane City"],["Graze",-27.383118,153.122053,1,"",""],["Hamilton Hotel",-27.438958,153.063862,0,"",""],["Hamsa Room",-27.458233,152.994567,1,"",""],["Happy Valley Brewing Company",-27.417441,153.013896,0,"34 Wolverhampton Street","Stafford"],["Hard Dogs",-27.460669,153.036995,0,"24 Martin Street",""],["Helios Brewing Company",-27.529666,153.011088,3,"15 Palomar Road","Yeerongpilly"],["Hello Gorgeous",-27.454666,153.041745,1,"",""],["Heritage Restaurant & Bar",-27.260598,152.953564,0,"",""],["Hiker Brewing Co",-27.542636,153.035245,3,"",""],["Hip Hops Brewers",-27.328009,152.982657,0,"264 South Pine Road","Brendale"],["Hitching Post Bar + Grill",-27.529736,152.909818,1,"",""],["Hodfellows",-27.368447,153.049436,3,"",""],["Hogan's Wellington Point",-27.486227,153.23887,0,"391 Main Road","Wellington Point"],["Holey Moley",-27.457194,153.035218,1,"",""],["Holland Park Hotel",-27.519251,153.061,0,"945 Logan Road",""],["Homestead Tavern",-27.362293,153.054816,0,"114 Zillmere Road",""],["Hop & Pickle",-27.479975,153.022923,0,"",""],["Hope & Anchor",-27.460872,153.004103,0,"",""],["Hoppers",-27.432642,153.045061,3,"41 Crosby Road","Albion"],["Horny Wombat",-27.233805,153.079401,0,"",""],["Hotel Diablo",-27.478799,153.022864,1,"",""],["Hotel HQ",-27.609037,153.111425,0,"",""],["Hotel Indooroopilly",-27.502465,152.97554,0,"15 Station Road","Indooroopilly"],["Hotel West End",-27.477633,153.013207,0,"10 Browning Street","South Brisbane"],["Hua",-27.474411,153.0252,1,"",""],["Hôtel Bravo",-27.4606,153.037491,0,"",""],["Inala Hotel",-27.57797,152.972524,0,"",""],["Irish Murphy's",-27.471567,153.024327,0,"175 George Street",""],["Isles Lane",-27.467163,153.027738,1,"",""],["Jetty",-27.480812,153.02504,1,"",""],["Jindalee Hotel",-27.53336,152.949577,0,"",""],["Johnny Ringo's Country Saloon",-27.462703,153.030946,0,"560 Queen Street",""],["Jolly Roger",-27.457882,153.033435,1,"187 Wickham Street",""],["Jubilee Hotel",-27.453671,153.033607,0,"",""],["Jungle",-27.480794,153.011598,1,"",""],["Kallangur Tavern",-27.250681,153.000069,0,"",""],["Kedron Park Hotel",-27.415793,153.036988,0,"693 Lutwyche Road","Lutwyche"],["Kensington Junction",-27.695509,153.082716,0,"",""],["Kerwick Hotel",-27.600177,152.871196,0,"1 Kerwich Street","Redbank"],["Kiki Kiosk",-27.474048,153.017675,1,"63 Melbourne Street","South Brisbane"],["Koala Tavern",-27.524031,153.196699,0,"36-40 Moreton Bay Road","Capalaba"],["La Lune Wine Co",-27.474985,153.015761,1,"109 Melbourne Street","South Brisbane"],["Lawnton Tavern",-27.281861,152.982159,0,"",""],["Lefty's Old Time Music Hall",-27.464551,153.01303,0,"",""],["Lions Sports Club",-27.609081,153.123563,1,"",""],["Little Valley",-27.457638,153.035205,1,"",""],["Logan City Tavern",-27.64188,153.108585,0,"108 Wembley Road","Logan Central"],["Logan Diggers (Logan and District Services Club)",-27.636825,153.103405,0,"42-48 Blackwood Road",""],["Lord Alfred Hotel",-27.464822,153.013244,0,"68 Petrie Terrace",""],["Lord Stanley Hotel",-27.488147,153.047672,0,"994 Stanley Street East",""],["Lost Bar and Nightclub",-27.457858,153.035762,2,"693 Ann Street",""],["Lucky Star Tavern",-27.596213,153.044862,0,"344 Jackson Road",""],["Lucky Tree Tavern",-27.593,152.991644,0,"248 King Avenue","Durack"],["Lychee Lounge",-27.47855,153.012609,1,"94 Boundary Street",""],["Lôft West End",-27.479096,153.012566,1,"",""],["Maker",-27.473718,153.017718,1,"9 Fish Lane","South Brisbane"],["Mango Hill Tavern",-27.242468,153.024447,0,"",""],["Manly Harbour Boat Club",-27.453026,153.188672,1,"",""],["Manly Hotel",-27.454744,153.184987,0,"",""],["Mansfield Tavern",-27.535251,153.102905,0,"181 Wecker Road","Mansfield"],["Meadowbrook Hotel",-27.667351,153.138995,0,"",""],["Milton Common",-27.469111,153.005557,0,"35 Railway Terrace","Milton"],["Miss Demeanor",-27.467845,153.026685,1,"Rowes Lane",""],["Morrison Hotel",-27.48545,153.030687,0,"640 Stanley Street","Woolloongabba"],["Mount Gravatt Hotel",-27.534544,153.07532,0,"",""],["Murrumba Downs Tavern",-27.264967,153.005714,0,"",""],["Navala",-27.467008,153.030981,1,"",""],["Neighbourhood",-27.507604,152.938604,1,"",""],["Netherworld",-27.455905,153.03204,1,"186 Brunswick Street","Fortitude Valley"],["Newmarket Hotel",-27.437098,153.007305,0,"",""],["Next Door",-27.478144,153.021622,1,"",""],["Norman Hotel",-27.491921,153.035275,0,"",""],["Normanby Hotel",-27.458981,153.014131,0,"1 Musgrave Road",""],["North Lakes Tavern",-27.240405,153.016852,0,"",""],["North Terrace Bar",-27.47543,153.019112,1,"",""],["Norths Leagues & Services Club",-27.252695,152.98814,0,"",""],["Nudgee Beach Hotel",-27.381404,153.090929,0,"",""],["O Bar",-27.463365,153.025868,1,"",""],["O'Aces Club",-27.406992,152.991113,0,"",""],["O'Skulligans",-27.457005,153.03449,1,"38 Warner Street",""],["Orion Hotel",-27.676615,152.901521,0,"",""],["Osbourne Hotel",-27.456486,153.036758,1,"",""],["Outpost Bar",-27.45794,153.034774,1,"318 Brunswick Street","Fortitude Valley"],["Oxford 152",-27.451071,153.059013,0,"152 Oxford Street","Bulimba"],["Oxford Tap House",-27.450984,153.055599,0,"",""],["Oxley Tavern",-27.575913,152.982522,0,"",""],["Parched Craft Brewery",-27.484755,153.001879,0,"",""],["Peel St Tavern",-27.472915,153.015856,0,"35 Peel Street","South Brisbane"],["Perentie Brewing",-27.723369,153.221185,3,"",""],["Petrie Hotel",-27.269827,152.976868,0,"2 Dayboro Road","Petrie"],["PFR Lounge",-27.457812,153.035822,1,"",""],["Pig & Whistle Tavern",-27.501331,152.972112,0,"",""],["Pig 'n' Whistle",-27.475765,153.019333,0,"",""],["Pig 'N' Whistle Riverside",-27.466659,153.030431,0,"",""],["Pineapple Hotel",-27.481059,153.036022,0,"706 Main Street","Kangaroo Point"],["Platform Bar",-27.466056,153.026158,1,"",""],["Pompette",-27.473975,153.024735,1,"",""],["Port Office Hotel",-27.471654,153.029877,0,"40 Edward Street",""],["Posadas Taqueria",-27.723609,153.220825,1,"",""],["PRECIOUS",-27.459066,153.035426,2,"351 Brunswick Street",""],["Prince Consort Hotel",-27.457526,153.033237,1,"230 Wickham Street","Fortitude Valley"],["Prince of Wales Hotel",-27.403652,153.060083,0,"1154 Sandgate Road",""],["Pub Lane Tavern",-27.73803,152.98347,0,"",""],["PubLovers",-27.361739,153.01663,0,"",""],["Puck Bar",-27.448007,153.046573,1,"",""],["Queensport Hotel",-27.440564,153.130248,0,"",""],["QUIVR BAR",-27.457976,153.036085,1,"5D Winn Lane",""],["QUIVR GAR",-27.457976,153.036085,1,"5D Winn Lane",""],["Rays by Range",-27.497533,153.068068,1,"4 Newman Avenue","Camp Hill"],["Red Brick Hotel",-27.489693,153.027071,0,"83 Annerley Road",""],["Red Room",-27.49757,153.015873,0,"",""],["Redbank Plains Tavern",-27.643968,152.870888,0,"339 Redbank Plains Road","Redbank Plains"],["Redcliffe RSL",-27.225177,153.113926,0,"",""],["Redcliffe Tavern",-27.23057,153.113888,0,"",""],["Regatta Hotel",-27.482618,152.996211,0,"543 Coronation Drive",""],["Returned and Services League - Wynnum",-27.443889,153.169275,0,"174 Tingal Road",""],["Reuben's Deli and Bar",-27.461766,153.005734,1,"208 Given Terrace","Paddington"],["Revel Brewing Co",-27.451404,153.088682,0,"",""],["Richlands Tavern",-27.60087,152.953494,1,"",""],["River Road Tavern",-27.713848,153.18858,0,"",""],["Riverland",-27.466163,153.030841,1,"167 Eagle Street",""],["Rocklea Hotel",-27.543084,153.010787,0,"1337 Ipswich Road","Rocklea"],["Rothwell's Bar & Grill",-27.467747,153.026562,1,"",""],["Royal Exchange Hotel",-27.486404,152.992396,0,"10 High Street",""],["Royal Hotel",-27.715588,153.200401,0,"",""],["Runcorn Tavern",-27.59593,153.065437,0,"124 Gowan Road",""],["Saccharomyces Beer Cafe",-27.474511,153.016591,1,"23 Fish Lane",""],["Salisbury Hotel Motel",-27.545385,153.040008,0,"",""],["Samford Valley Hotel",-27.369877,152.887626,0,"Main Street",""],["Sandgate Post Office Hotel",-27.321064,153.069082,0,"1 Bowser Parade",""],["Sandgate RSL Memorial Club",-27.318786,153.066524,0,"",""],["Sasquatch",-27.388644,153.031486,1,"763 Gympie Road",""],["Savile Row",-27.458357,153.035346,1,"667 Ann Street",""],["Shady Palms",-27.501158,153.045975,1,"",""],["Shafston Hotel",-27.479231,153.041611,0,"3 Lytton Road","East Brisbane"],["Showmans Club",-27.741145,153.222903,0,"",""],["Sixes And Sevens",-27.457717,153.040973,1,"",""],["Slipstream Brewing Company",-27.526961,153.014442,3,"94 Wilkie Street","Yeerongpilly"],["SoPOP",-27.457957,153.034022,2,"299 Brunswick Street Mall",""],["South Bank Beer Garden",-27.478305,153.023086,1,"",""],["Southbeach Social",-27.4786,153.023234,1,"",""],["Spice Nightlife",-27.459015,153.035441,1,"351 Brunswick Street",""],["Spring Lake Hotel",-27.669125,152.917262,0,"",""],["Springfield Tavern",-27.653292,152.920285,0,"",""],["Springwood Hotel",-27.611176,153.123895,0,"",""],["Stafford Tavern",-27.416487,153.016384,0,"51 Webster Road","Stafford"],["Stock Exchange Hotel",-27.469534,153.028506,0,"131 Edward Street",""],["Stone & Wood Brewing Co",-27.454625,153.035381,0,"99 Bridge Street",""],["Stones Corner Hotel",-27.498872,153.044931,0,"346 Logan Road",""],["Story Bridge Hotel",-27.468854,153.035634,0,"200 Main Street","Kangaroo Point"],["Suburban Social",-27.505362,152.960288,1,"",""],["Sundowner Hotel",-27.715652,153.200847,0,"",""],["Sunnybank Community & Sports Club",-27.572303,153.073341,0,"470 McCullough Street",""],["Sunnybank Hotel",-27.572543,153.063164,0,"289 McCullough Street","Sunnybank"],["Taigum Tavern",-27.350566,153.046841,0,"",""],["Tapworks Bar & Grill",-27.382576,153.031547,1,"",""],["Tax Office",-27.45703,153.036205,1,"740 Ann Street",""],["Terminus",-27.474163,153.017455,0,"71 Melbourne Street","South Brisbane"],["The Alliance Hotel",-27.461281,153.026267,0,"170 Leichhardt Street","Spring Hill"],["The Bavarian",-27.382596,153.030851,1,"",""],["The Beat Megaclub",-27.458248,153.035607,2,"",""],["The Boundary Hotel",-27.47898,153.012245,0,"",""],["The Bowery",-27.458212,153.035129,1,"",""],["The Brightside",-27.457074,153.035059,1,"",""],["The Catchment",-27.480783,153.012223,0,"150 Boundary Street","West End"],["The Cave Inn",-27.490582,153.03847,1,"47 Balaclava Street",""],["The Chermside Tavern",-27.380264,153.033216,0,"",""],["The Colmslie Hotel",-27.465653,153.078588,0,"",""],["The Common",-27.384935,153.120791,1,"",""],["The Elephant & Wheelbarrow",-27.457528,153.033426,0,"",""],["The End",-27.480931,153.010897,1,"",""],["The Fourth Monkey",-27.477022,153.012359,1,"",""],["The Gap Tavern",-27.450578,152.966943,0,"",""],["The Gatsby",-27.45698,153.036258,1,"740 Ann Street",""],["The Gibson Sports Club",-27.411604,153.014052,0,"352 Stafford Road","Stafford"],["The Glen Hotel",-27.58402,153.098187,0,"24 Gaskell Street","Eight Mile Plains"],["The Gresham",-27.467097,153.028179,1,"",""],["The Grove",-27.445114,152.993052,0,"225 Waterworks Road","Ashgrove"],["The Inchcolm Bar",-27.464482,153.026987,1,"",""],["The Independent",-27.386592,153.119409,1,"",""],["The Junction",-27.509281,153.032833,0,"",""],["The Junk Bar",-27.464125,153.042709,1,"710 Brunswick Street","New Farm"],["The Kenmore",-27.50631,152.949474,0,"",""],["The Long Bar",-27.47876,153.004097,1,"",""],["The Manhattan Line",-27.480429,153.023241,1,"",""],["The Margarita Bar",-27.483614,153.028075,1,"",""],["The Marquee Bar",-27.458301,153.034985,1,"",""],["The Met",-27.456814,153.034154,2,"",""],["The Met",-27.456846,153.033766,2,"256 Wickham Street","Fortitude Valley"],["The Mix Bar",-27.486488,153.034104,1,"765 Stanley Street","Woolloongabba"],["The Montague Hotel",-27.483337,153.002922,0,"363 Montague Road","West End"],["The Ox Oxley Hotel",-27.565687,152.979177,0,"",""],["The Pav Bar",-27.471142,153.030396,0,"",""],["The Press Club",-27.45876,153.035194,1,"",""],["The Queens Arms Hotel",-27.45768,153.041456,0,"64 James Street",""],["The Queenslander Marsden Tavern",-27.680342,153.116714,0,"52 Chambers Flat Road","Waterford West"],["The Raven Hotel",-27.485662,153.00202,0,"404 Montague Road",""],["The Retro Bar Kenmore",-27.508602,152.938066,1,"2071 Moggill Road","Kenmore"],["The Rose & Crown",-27.481733,153.023404,0,"",""],["The Royal George",-27.458497,153.034825,0,"",""],["The Sangira Bar",-27.477908,153.021295,1,"",""],["The Scratch",-27.469917,153.004009,0,"",""],["The Shelter Bar",-27.468785,153.036013,1,"",""],["The Ship Inn S06",-27.481924,153.025021,0,"",""],["The Sky Room",-27.457382,153.033467,1,"",""],["The Sporting Globe",-27.384404,153.031614,1,"",""],["The Sporting Globe Bar & Grill",-27.658672,153.16973,1,"",""],["The Triffid",-27.4523,153.042036,0,"9 Stratton Street","Newstead"],["The V Lounge",-27.459634,153.032014,1,"",""],["The Wickham",-27.45607,153.034851,0,"",""],["The Willow Hotel",-27.533459,153.024733,0,"215 Beaudesert Road","Moorooka"],["Thirsty Republic",-27.443983,153.080373,1,"",""],["Tinbilly Travellers",-27.467235,153.019531,0,"466 George Street",""],["Tingalpa Hotel",-27.474951,153.127756,0,"1563 Wynnum Road",""],["Tomcat",-27.457742,153.033161,1,"210 Wickham Street","Fortitude Valley"],["Transcontinental",-27.467049,153.019408,0,"482 George Street",""],["Transit Tavern",-27.414454,153.081232,0,"",""],["Tuk Tuk Garden Bar",-27.4705,153.003962,1,"",""],["Two Lounge and Dining",-27.458126,153.035221,1,"690",""],["Unforgiven",-27.462197,153.008885,1,"",""],["Uni Bar",-27.552312,153.052637,0,"",""],["Victory",-27.469824,153.028804,0,"127 Edward Street",""],["Warehouse 25",-27.466459,153.005658,1,"25 Finchley Street","Milton"],["Warner Tavern",-27.293758,152.954693,0,"2 Everest Street","Warner"],["Waterloo Hotel",-27.452619,153.040969,0,"Ann Street",""],["WestsideHQ",-27.538184,152.981146,0,"3 Clewley Street","Corinda"],["Whale Bar",-27.444593,153.080894,1,"",""],["White Lies Brewing and Distillery",-27.539678,152.956312,3,"30 Benronalds Street","Seventeen Mile Rocks"],["Windaroo Tavern",-27.735162,153.194291,0,"",""],["Wonderland",-27.45894,153.034701,1,"633 Ann Street","Fortitude Valley"],["Woolloongabba Hotel",-27.487106,153.035669,0,"803 Stanley Street",""],["Working Title Brew Co.",-27.451661,153.043869,3,"85 Doggett Street",""],["Wynnum Tavern",-27.457771,153.153863,0,"",""]];
+
+const KIND_LABEL = ["Pub","Bar","Club","Brewery"];
+const VENUES = RAW.map((r, i) => ({
+  id: "osm/" + i, name: r[0], lat: r[1], lon: r[2], kind: r[3],
+  address: [r[4], r[5]].filter(Boolean).join(", ")
+}));
+
+const BRISBANE = [-27.4698, 153.0251];
+const OSRM = "https://routing.openstreetmap.de/routed-foot/route/v1/foot/";
+const STORE = "lastdrinks.v2";
+
+const state = {
+  crawl: [], route: null, routeKey: null,
+  kinds: [true,true,true,true], query: "", shown: []
+};
+const $ = id => document.getElementById(id);
+
+/* ---------------- map ---------------- */
+const map = L.map("map").setView(BRISBANE, 15);
+L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+  maxZoom: 19, attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
+}).addTo(map);
+const layerResults = L.layerGroup().addTo(map);
+const layerStops   = L.layerGroup().addTo(map);
+const layerRoute   = L.layerGroup().addTo(map);
+
+/* ---------------- helpers ---------------- */
+const metres = m => m == null ? "—" : (m < 950 ? Math.round(m/10)*10 + " m" : (m/1000).toFixed(1) + " km");
+function mins(s){
+  if (s == null) return "—";
+  const m = Math.round(s/60);
+  return m < 60 ? m + " min" : Math.floor(m/60) + "h " + String(m%60).padStart(2,"0");
+}
+function haversine(a,b){
+  const R = 6371000, rad = d => d*Math.PI/180;
+  const dLat = rad(b.lat-a.lat), dLon = rad(b.lon-a.lon);
+  const h = Math.sin(dLat/2)**2 + Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function notice(where,msg){
+  $(where).innerHTML = msg ? `<div class="notice">${esc(msg)}</div>` : "";
+}
+const inCrawl = id => state.crawl.some(v => v.id === id);
+
+/* ---------------- finding venues (all local, instant) ---------------- */
+function currentResults(){
+  const q = state.query.trim().toLowerCase();
+  const pool = VENUES.filter(v => state.kinds[v.kind]);
+  if (q) return pool.filter(v => v.name.toLowerCase().includes(q)).slice(0,120);
+  const b = map.getBounds();
+  return pool.filter(v => b.contains([v.lat, v.lon])).slice(0,120);
+}
+
+function drawResults(){
+  state.shown = currentResults();
+  const q = state.query.trim();
+  const list = $("results");
+  layerResults.clearLayers();
+
+  $("hint").innerHTML = q
+    ? `Searching all ${VENUES.length} Brisbane venues by name.`
+    : `Showing venues in the current map view. Pan or zoom to explore.`;
+
+  if (!state.shown.length){
+    list.innerHTML = q
+      ? `<div class="empty"><h2>No venue by that name</h2>
+         <p>It may not be in OpenStreetMap yet. Use <b>Add a spot</b> on the map to place it by hand,
+         or press Enter to jump the map to a suburb of that name.</p></div>`
+      : `<div class="empty"><h2>Nothing in view</h2>
+         <p>Zoom out, or search a venue by name above.</p></div>`;
+    return;
+  }
+
+  list.innerHTML = state.shown.map(v => {
+    const added = inCrawl(v.id);
+    return `<button class="result ${added?"added":""}" data-add="${v.id}" ${added?"disabled":""}>
+      <span class="meta">
+        <span class="nm">${esc(v.name)}</span>
+        <span class="sub">${esc(v.address || "Address not recorded in OpenStreetMap")}</span>
+      </span>
+      <span class="kind">${KIND_LABEL[v.kind]}</span>
+      <span class="plus">${added?"✓":"+"}</span>
+    </button>`;
+  }).join("");
+
+  state.shown.forEach(v => {
+    L.marker([v.lat,v.lon], { icon: L.divIcon({ className:"",
+      html:'<div class="dot"></div>', iconSize:[13,13], iconAnchor:[7,7] }) })
+      .addTo(layerResults)
+      .bindPopup(`<span class="pnm">${esc(v.name)}</span>
+        <span class="psub">${KIND_LABEL[v.kind]}${v.address ? " · " + esc(v.address) : ""}</span>
+        ${inCrawl(v.id) ? '<span class="psub">Already in the crawl</span>'
+          : `<button class="btn" data-addmap="${v.id}">Add to crawl</button>`}`);
+  });
+}
+
+/* suburb jump, only used when a name search finds nothing */
+async function jumpTo(q){
+  notice("findNotice", "Looking up " + q + "…");
+  try {
+    const res = await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=au&q="
+      + encodeURIComponent(q));
+    const j = await res.json();
+    if (!j.length){ notice("findNotice", "No place called " + q + " found in Australia."); return; }
+    notice("findNotice", "");
+    $("q").value = ""; state.query = "";
+    map.setView([+j[0].lat, +j[0].lon], 16);
+    drawResults();
+  } catch(e){
+    notice("findNotice", "Place lookup unavailable. Pan the map manually instead.");
+  }
+}
+
+/* ---------------- crawl operations ---------------- */
+function addStop(v){ if (!inCrawl(v.id)){ state.crawl.push({...v}); afterChange(); } }
+function removeStop(i){ state.crawl.splice(i,1); afterChange(); }
+function moveStop(from,to){
+  if (to < 0 || to >= state.crawl.length) return;
+  const [v] = state.crawl.splice(from,1);
+  state.crawl.splice(to,0,v);
+  afterChange();
+}
+function afterChange(){
+  save(); drawResults(); drawSpine(); drawStops(); drawRoute(); updateTotals(); scheduleRoute();
+}
+
+/* ---------------- routing ---------------- */
+let routeTimer = null;
+function scheduleRoute(){
+  clearTimeout(routeTimer);
+  if (state.crawl.length < 2){
+    state.route = null; state.routeKey = null;
+    layerRoute.clearLayers(); drawSpine(); updateTotals(); return;
+  }
+  routeTimer = setTimeout(computeRoute, 700);
+}
+async function computeRoute(){
+  const coords = state.crawl.map(v => `${v.lon.toFixed(6)},${v.lat.toFixed(6)}`).join(";");
+  if (coords === state.routeKey) return;
+  notice("crawlNotice", "Working out the walking route…");
+  try {
+    const res = await fetch(`${OSRM}${coords}?overview=full&geometries=geojson`);
+    const j = await res.json();
+    if (j.code !== "Ok" || !j.routes?.length) throw new Error(j.message || "no route");
+    const r = j.routes[0];
+    state.route = {
+      legs: r.legs.map(l => ({ distance:l.distance, duration:l.duration })),
+      coords: r.geometry.coordinates.map(c => [c[1],c[0]])
+    };
+    state.routeKey = coords;
+    notice("crawlNotice","");
+  } catch(e){
+    state.route = null; state.routeKey = null;
+    notice("crawlNotice","Couldn't fetch street directions. Showing straight-line estimates instead.");
+  }
+  drawRoute(); drawSpine(); updateTotals();
+}
+
+/* ---------------- crawl spine ---------------- */
+function legInfo(i){
+  if (state.route?.legs?.[i]) return { ...state.route.legs[i], approx:false };
+  const a = state.crawl[i], b = state.crawl[i+1];
+  if (!a || !b) return null;
+  const d = haversine(a,b)*1.3;
+  return { distance:d, duration:d/1.35, approx:true };
+}
+function drawSpine(){
+  const el = $("spine");
+  if (!state.crawl.length){
+    el.innerHTML = `<div class="empty"><h2>No stops yet</h2>
+      <p>Find venues on the map and add them in the order you'll walk them.
+      You can shuffle the order at any time.</p></div>`;
+    return;
+  }
+  let html = "";
+  state.crawl.forEach((v,i) => {
+    html += `<div class="stop" draggable="true" data-i="${i}">
+      <div class="pin">${i+1}</div>
+      <div class="card">
+        <span class="meta" data-pan="${i}">
+          <span class="nm">${esc(v.name)}</span>
+          <span class="sub">${KIND_LABEL[v.kind]}${v.address ? " · " + esc(v.address) : ""}</span>
+        </span>
+        <span class="acts">
+          <button class="icon grip" aria-hidden="true" tabindex="-1" title="Drag to reorder">⠿</button>
+          <button class="icon" data-up="${i}" ${i===0?"disabled":""} aria-label="Move ${esc(v.name)} earlier">▲</button>
+          <button class="icon" data-down="${i}" ${i===state.crawl.length-1?"disabled":""} aria-label="Move ${esc(v.name)} later">▼</button>
+          <button class="icon kill" data-del="${i}" aria-label="Remove ${esc(v.name)}">✕</button>
+        </span>
+      </div>
+    </div>`;
+    const leg = i < state.crawl.length-1 ? legInfo(i) : null;
+    if (leg){
+      html += `<div class="leg"><div class="legline"></div>
+        <div class="legtxt ${leg.approx?"approx":""}">
+          <b>${metres(leg.distance)}</b> · ${mins(leg.duration)} walk${leg.approx?" (estimate)":""}
+        </div></div>`;
+    }
+  });
+  el.innerHTML = html;
+}
+
+/* ---------------- map drawing ---------------- */
+function drawStops(){
+  layerStops.clearLayers();
+  state.crawl.forEach((v,i) => {
+    L.marker([v.lat,v.lon], { zIndexOffset:500, icon: L.divIcon({ className:"",
+      html:`<div class="numpin">${i+1}</div>`, iconSize:[32,32], iconAnchor:[16,16] }) })
+      .addTo(layerStops)
+      .bindPopup(`<span class="pnm">${i+1}. ${esc(v.name)}</span>
+        <span class="psub">${KIND_LABEL[v.kind]}</span>`);
+  });
+}
+function drawRoute(){
+  layerRoute.clearLayers();
+  if (state.route?.coords?.length){
+    L.polyline(state.route.coords,{color:"#0D1A15",weight:9,opacity:.85}).addTo(layerRoute);
+    L.polyline(state.route.coords,{color:"#F0A93C",weight:4,opacity:.95}).addTo(layerRoute);
+  } else if (state.crawl.length > 1){
+    L.polyline(state.crawl.map(v=>[v.lat,v.lon]),
+      {color:"#9C8148",weight:3,opacity:.6,dashArray:"6 8"}).addTo(layerRoute);
+  }
+}
+function updateTotals(){
+  $("tStops").textContent = state.crawl.length;
+  $("tabCount").textContent = state.crawl.length;
+  if (state.crawl.length < 2){ $("tDist").textContent="—"; $("tTime").textContent="—"; return; }
+  let d=0,t=0;
+  for (let i=0;i<state.crawl.length-1;i++){ const l=legInfo(i); if(l){ d+=l.distance; t+=l.duration; } }
+  $("tDist").textContent = metres(d);
+  $("tTime").textContent = mins(t);
+}
+function fitAll(){
+  const pts = state.crawl.map(v=>[v.lat,v.lon]);
+  if (state.route?.coords) pts.push(...state.route.coords);
+  if (pts.length) map.fitBounds(L.latLngBounds(pts),{padding:[50,50],maxZoom:17});
+}
+
+/* ---------------- persistence ---------------- */
+function save(){ try{ localStorage.setItem(STORE, JSON.stringify({crawl:state.crawl})); }catch(e){} }
+function load(){
+  try{
+    const j = JSON.parse(localStorage.getItem(STORE) || "{}");
+    if (Array.isArray(j.crawl)) state.crawl = j.crawl;
+  }catch(e){}
+}
+
+/* ---------------- tabs ---------------- */
+function selectTab(which){
+  const find = which === "find";
+  $("tabFind").setAttribute("aria-selected", find);
+  $("tabCrawl").setAttribute("aria-selected", !find);
+  $("paneFind").classList.toggle("on", find);
+  $("paneCrawl").classList.toggle("on", !find);
+}
+
+/* ---------------- events ---------------- */
+let moveTimer = null;
+map.on("moveend", () => {
+  if (state.query.trim()) return;
+  clearTimeout(moveTimer);
+  moveTimer = setTimeout(drawResults, 180);
+});
+$("q").addEventListener("input", e => { state.query = e.target.value; drawResults(); });
+$("q").addEventListener("keydown", e => {
+  if (e.key === "Enter" && state.query.trim() && !state.shown.length) jumpTo(state.query.trim());
+});
+$("chips").addEventListener("click", e => {
+  const c = e.target.closest(".chip"); if (!c) return;
+  const on = c.getAttribute("aria-pressed") === "true";
+  c.setAttribute("aria-pressed", String(!on));
+  state.kinds[+c.dataset.k] = !on;
+  drawResults();
+});
+$("tabFind").onclick = () => selectTab("find");
+$("tabCrawl").onclick = () => selectTab("crawl");
+$("btnFit").onclick = fitAll;
+
+$("results").addEventListener("click", e => {
+  const b = e.target.closest("[data-add]"); if (!b) return;
+  const v = VENUES.find(x => x.id === b.dataset.add);
+  if (v) addStop(v);
+});
+map.on("popupopen", e => {
+  const btn = e.popup.getElement()?.querySelector("[data-addmap]");
+  if (!btn) return;
+  btn.onclick = () => {
+    const v = VENUES.find(x => x.id === btn.dataset.addmap);
+    if (v){ addStop(v); map.closePopup(); }
+  };
+});
+$("spine").addEventListener("click", e => {
+  const t = e.target.closest("button, [data-pan]"); if (!t) return;
+  if (t.dataset.del != null) removeStop(+t.dataset.del);
+  else if (t.dataset.up != null) moveStop(+t.dataset.up, +t.dataset.up-1);
+  else if (t.dataset.down != null) moveStop(+t.dataset.down, +t.dataset.down+1);
+  else if (t.dataset.pan != null){
+    const v = state.crawl[+t.dataset.pan];
+    if (v) map.setView([v.lat,v.lon], Math.max(map.getZoom(),16));
+  }
+});
+
+let dragFrom = null;
+$("spine").addEventListener("dragstart", e => {
+  const s = e.target.closest(".stop"); if (!s) return;
+  dragFrom = +s.dataset.i; s.classList.add("drag");
+  e.dataTransfer.effectAllowed = "move";
+});
+$("spine").addEventListener("dragover", e => {
+  const s = e.target.closest(".stop"); if (!s || dragFrom === null) return;
+  e.preventDefault();
+  document.querySelectorAll(".stop.over").forEach(n => n.classList.remove("over"));
+  s.classList.add("over");
+});
+$("spine").addEventListener("drop", e => {
+  const s = e.target.closest(".stop"); if (!s || dragFrom === null) return;
+  e.preventDefault(); moveStop(dragFrom, +s.dataset.i); dragFrom = null;
+});
+$("spine").addEventListener("dragend", () => {
+  dragFrom = null;
+  document.querySelectorAll(".stop.drag,.stop.over").forEach(n => n.classList.remove("drag","over"));
+});
+
+/* drop a pin for anything OpenStreetMap doesn't know about */
+let pinMode = false;
+function setPinMode(on){
+  pinMode = on;
+  $("btnPin").textContent = on ? "Now tap the map" : "Add a spot";
+  map.getContainer().style.cursor = on ? "crosshair" : "";
+}
+$("btnPin").onclick = () => setPinMode(!pinMode);
+map.on("click", e => {
+  if (!pinMode) return;
+  const name = prompt("What's this place called?");
+  setPinMode(false);
+  if (!name || !name.trim()) return;
+  addStop({ id:"manual/"+Date.now(), name:name.trim(), lat:e.latlng.lat, lon:e.latlng.lng,
+    kind:1, address:"Added by hand" });
+  selectTab("crawl");
+});
+
+/* ---------------- boot ---------------- */
+$("stamp").textContent = DATA_STAMP;
+load();
+drawResults(); drawSpine(); drawStops(); drawRoute(); updateTotals();
+if (state.crawl.length){ scheduleRoute(); fitAll(); selectTab("crawl"); }
+</script>
+</body>
+</html>
