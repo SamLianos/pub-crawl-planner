@@ -362,10 +362,6 @@ select{cursor:pointer}
             <button class="btn ghost sm" id="btnDupe">Duplicate</button>
             <button class="btn ghost sm" id="btnDel">Delete</button>
           </div>
-          <div class="row">
-            <button class="btn sm" id="btnShare" style="flex:1">Share this crawl</button>
-            <button class="btn ghost sm" id="btnSend" hidden>Send…</button>
-          </div>
           <div class="sharebox" id="shareBox" hidden>
             <input type="text" id="shareUrl" readonly aria-label="Shareable link">
             <p class="hint" id="shareInfo"></p>
@@ -1044,8 +1040,8 @@ async function doShare(preferNative){
     $("shareInfo").classList.add("warn");
     return;
   }
-  const btn = $("btnShare");
-  btn.disabled = true; btn.textContent = "Building link…";
+  const btn = $("btnShareTop"), lbl = btn.querySelector("span");
+  btn.disabled = true; lbl.textContent = "Working…";
   try{
     const url = await buildShareLink();
     const local = location.protocol === "file:";
@@ -1073,20 +1069,14 @@ async function doShare(preferNative){
     }
     $("shareInfo").textContent = msg;
     $("shareInfo").classList.toggle("warn", url.length > 2000 || local);
-    $("btnSend").hidden = !navigator.share || local;
   }catch(e){
     revealShare();
     $("shareInfo").textContent = "Couldn't build a link for this crawl.";
   }finally{
-    btn.disabled = false; btn.textContent = "Share this crawl";
+    btn.disabled = false; lbl.textContent = "Share";
   }
 }
-$("btnShare").onclick = () => doShare(false);
 $("btnShareTop").onclick = () => doShare(true);
-$("btnSend").onclick = async () => {
-  const url = $("shareUrl").value; if (!url) return;
-  try{ await navigator.share({ title:active().name, text:"Here's the crawl:", url }); }catch(e){}
-};
 $("shareUrl").onclick = e => e.target.select();
 
 $("btnDel").onclick = () => {
