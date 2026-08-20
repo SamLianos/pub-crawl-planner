@@ -58,7 +58,9 @@ button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
 
 input[type=text],input[type=date],input[type=time],select,textarea{
   width:100%;background:var(--ink);border:1px solid var(--line);color:var(--bone);
-  padding:9px 11px;border-radius:var(--r);font-family:inherit;font-size:14px}
+  padding:9px 11px;border-radius:var(--r);font-family:inherit;
+  /* 16px minimum stops iOS Safari zooming in on focus, without disabling pinch zoom */
+  font-size:16px}
 input::placeholder,textarea::placeholder{color:#63756B}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--amber)}
 textarea{resize:vertical;min-height:64px;line-height:1.5}
@@ -82,7 +84,13 @@ select{cursor:pointer}
   background:var(--raise);border:1px solid transparent;border-radius:var(--r);
   padding:11px 12px;margin-bottom:7px;transition:border-color .15s,background .15s}
 .result:hover{background:var(--raise-lit);border-color:var(--line)}
-.result.added{opacity:.45}
+.result.added{opacity:.5}
+.result.added:hover,.result.added:focus-visible{opacity:1}
+.plus .rm{display:none}
+.result.added:hover .plus,.result.added:focus-visible .plus{
+  background:var(--claret);color:#fff;border-color:var(--claret)}
+.result.added:hover .plus .ck,.result.added:focus-visible .plus .ck{display:none}
+.result.added:hover .plus .rm,.result.added:focus-visible .plus .rm{display:inline}
 .result .meta{flex:1;min-width:0}
 .result .nm{font-weight:600;font-size:14px;display:block;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
@@ -96,6 +104,9 @@ select{cursor:pointer}
 
 /* crawl header */
 .crawlbar{padding:var(--pad);border-bottom:1px solid var(--line);display:grid;gap:9px}
+.settings{display:grid;gap:9px}
+.settingsToggle{display:none}
+.chev{transition:transform .18s;color:var(--dim)}
 .crawlbar .row{display:flex;gap:8px}
 .crawlbar .row > *{min-width:0}
 .lbl{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);
@@ -115,13 +126,14 @@ select{cursor:pointer}
 .card .meta{flex:1;min-width:0;cursor:pointer}
 .card .nm{font-weight:600;font-size:15px;display:block}
 .card .sub{font-size:12px;color:var(--dim);display:block;margin-top:1px}
-.acts{display:flex;flex-direction:column;gap:3px;flex:0 0 auto}
-.icon{background:none;border:0;color:var(--dim);width:26px;height:22px;display:grid;
-  place-items:center;border-radius:5px;font-size:13px;line-height:1}
-.icon:hover{background:var(--raise-lit);color:var(--bone)}
-.icon.kill:hover{background:rgba(196,84,77,.16);color:var(--claret)}
-.icon:disabled{opacity:.22;cursor:not-allowed;background:none}
-.grip{cursor:grab;color:var(--brass)}
+.acts{display:flex;gap:6px;margin-top:9px}
+.act{flex:1;min-height:42px;background:var(--ink);border:1px solid var(--line);color:var(--dim);
+  border-radius:var(--r);font-size:12.5px;font-weight:600;display:grid;place-items:center;
+  line-height:1.2;padding:6px 4px;transition:all .15s}
+.act:hover{background:var(--raise-lit);color:var(--bone);border-color:var(--brass)}
+.act:disabled{opacity:.25;cursor:not-allowed;background:var(--ink);color:var(--dim);border-color:var(--line)}
+.act.kill:hover{background:rgba(196,84,77,.18);color:#F0B6B2;border-color:var(--claret)}
+.grip{cursor:grab;color:var(--brass);font-size:16px;padding:2px 0 0 8px;flex:0 0 auto}
 
 .ctrls{display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:wrap}
 .timechip{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--amber);
@@ -136,7 +148,7 @@ select{cursor:pointer}
   padding:3px 11px;font-size:11.5px}
 .notebtn:hover{background:var(--raise-lit);color:var(--bone)}
 .notebtn.has{border-color:var(--brass);color:var(--brass)}
-.card textarea{margin-top:9px;font-size:13px}
+.card textarea{margin-top:9px}
 
 .leg{display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:center}
 .legline{height:34px;width:0;border-left:2px dashed var(--brass);margin-left:21px;opacity:.75}
@@ -184,6 +196,24 @@ select{cursor:pointer}
   .total b{font-size:15px}
   .totals{gap:13px}
   .maptools{bottom:14px}
+  .act{min-height:50px;font-size:13.5px}
+  .settingsToggle{display:flex;width:100%;align-items:center;justify-content:space-between;
+    background:var(--raise);border:1px solid var(--line);border-radius:var(--r);
+    padding:12px 14px;font-weight:600;font-size:14px;color:var(--bone);text-align:left}
+  .settingsToggle #settingsLabel{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .settings{display:none}
+  .crawlbar.open .settings{display:grid}
+  .crawlbar.open .chev{transform:rotate(180deg)}
+  .stay button{padding:7px 14px;font-size:15px}
+  .notebtn{padding:6px 14px;font-size:13px}
+  .plus{width:36px;height:36px}
+  .crawlbar{gap:12px}
+  .settings{gap:12px}
+  .crawlbar .row.split{flex-direction:column;gap:12px}
+  .crawlbar .row.split .half{width:100%}
+  /* stays at 16px so iOS doesn't zoom on focus; trimmed via padding instead */
+  .crawlbar input[type=date],.crawlbar input[type=time]{padding:7px 10px}
+  .lbl{margin-bottom:5px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -227,7 +257,11 @@ select{cursor:pointer}
       </section>
 
       <section class="pane" id="paneCrawl" role="tabpanel">
-        <div class="crawlbar">
+        <div class="crawlbar" id="crawlbar">
+          <button class="settingsToggle" id="btnSettings" aria-expanded="false" aria-controls="crawlSettings">
+            <span id="settingsLabel">Crawl settings</span><span class="chev">▾</span>
+          </button>
+          <div class="settings" id="crawlSettings">
           <div class="row">
             <div style="flex:1;min-width:0">
               <label class="lbl" for="crawlPick">Crawl</label>
@@ -243,7 +277,7 @@ select{cursor:pointer}
             <label class="lbl" for="crawlName">Name</label>
             <input type="text" id="crawlName" placeholder="Saturday sesh">
           </div>
-          <div class="row">
+          <div class="row split">
             <div class="half">
               <label class="lbl" for="crawlDate">Date</label>
               <input type="date" id="crawlDate">
@@ -252,6 +286,7 @@ select{cursor:pointer}
               <label class="lbl" for="crawlStart">Kick off</label>
               <input type="time" id="crawlStart">
             </div>
+          </div>
           </div>
         </div>
         <div id="crawlNotice"></div>
@@ -354,6 +389,7 @@ function renderCrawlBar(){
   $("crawlDate").value = c.date || "";
   $("crawlStart").value = c.start || "19:00";
   $("tagline").textContent = c.name;
+  $("settingsLabel").textContent = `${c.name} · ${c.stops.length} ${c.stops.length===1?"stop":"stops"}`;
 }
 
 /* ---------------- finding venues ---------------- */
@@ -384,11 +420,12 @@ function drawResults(){
   }
   list.innerHTML = state.shown.map(v => {
     const added = inCrawl(v.id);
-    return `<button class="result ${added?"added":""}" data-add="${v.id}" ${added?"disabled":""}>
+    return `<button class="result ${added?"added":""}"
+      ${added?`data-remove="${v.id}" title="Remove from crawl"`:`data-add="${v.id}" title="Add to crawl"`}>
       <span class="meta"><span class="nm">${esc(v.name)}</span>
       <span class="sub">${esc(v.address || "Address not recorded in OpenStreetMap")}</span></span>
       <span class="kind">${KIND_LABEL[v.kind]}</span>
-      <span class="plus">${added?"✓":"+"}</span></button>`;
+      <span class="plus">${added?'<span class="ck">✓</span><span class="rm">✕</span>':"+"}</span></button>`;
   }).join("");
 
   state.shown.forEach(v => {
@@ -396,7 +433,7 @@ function drawResults(){
       iconSize:[13,13],iconAnchor:[7,7]})}).addTo(layerResults)
       .bindPopup(`<span class="pnm">${esc(v.name)}</span>
         <span class="psub">${KIND_LABEL[v.kind]}${v.address?" · "+esc(v.address):""}</span>
-        ${inCrawl(v.id)?'<span class="psub">Already in the crawl</span>'
+        ${inCrawl(v.id)?`<button class="btn ghost" data-rmmap="${v.id}">Remove from crawl</button>`
           :`<button class="btn" data-addmap="${v.id}">Add to crawl</button>`}`);
   });
 }
@@ -420,6 +457,10 @@ function addStop(v){
   afterChange();
 }
 function removeStop(i){ stops().splice(i,1); afterChange(); }
+function removeById(id){
+  const i = stops().findIndex(v => v.id === id);
+  if (i > -1) removeStop(i);
+}
 function moveStop(from,to){
   const s = stops();
   if (to < 0 || to >= s.length) return;
@@ -502,12 +543,7 @@ function drawSpine(){
             <span class="nm">${esc(v.name)}</span>
             <span class="sub">${KIND_LABEL[v.kind] || "Spot"}${v.address?" · "+esc(v.address):""}</span>
           </span>
-          <span class="acts">
-            <button class="icon grip" aria-hidden="true" tabindex="-1" title="Drag to reorder">⠿</button>
-            <button class="icon" data-up="${i}" ${i===0?"disabled":""} aria-label="Move ${esc(v.name)} earlier">▲</button>
-            <button class="icon" data-down="${i}" ${i===s.length-1?"disabled":""} aria-label="Move ${esc(v.name)} later">▼</button>
-            <button class="icon kill" data-del="${i}" aria-label="Remove ${esc(v.name)}">✕</button>
-          </span>
+          <span class="grip" aria-hidden="true" title="Drag to reorder">⠿</span>
         </div>
         <div class="ctrls">
           <span class="timechip">${clock(sch[i].arrive)}</span>
@@ -517,6 +553,11 @@ function drawSpine(){
             <button data-stay="${i}" data-d="15" aria-label="More time here">+</button>
           </span>
           <button class="notebtn ${hasNote?"has":""}" data-note="${i}">${hasNote?"Notes ✓":"Add notes"}</button>
+        </div>
+        <div class="acts">
+          <button class="act" data-up="${i}" ${i===0?"disabled":""} aria-label="Move ${esc(v.name)} earlier">▲ Earlier</button>
+          <button class="act" data-down="${i}" ${i===s.length-1?"disabled":""} aria-label="Move ${esc(v.name)} later">▼ Later</button>
+          <button class="act kill" data-del="${i}" aria-label="Remove ${esc(v.name)} from the crawl">✕ Remove</button>
         </div>
         <textarea data-notes="${i}" placeholder="Dress code, who's meeting you, booking name, drink specials…"
           ${hasNote?"":"hidden"}>${esc(v.notes||"")}</textarea>
@@ -543,7 +584,8 @@ function drawStops(){
       .addTo(layerStops)
       .bindPopup(`<span class="pnm">${i+1}. ${esc(v.name)}</span>
         <span class="psub">${clock(sch[i].arrive)} · ${v.stay ?? DEFAULT_STAY} min</span>
-        ${v.notes?`<span class="psub">${esc(v.notes)}</span>`:""}`);
+        ${v.notes?`<span class="psub">${esc(v.notes)}</span>`:""}
+        <button class="btn ghost" data-rmmap="${v.id}">Remove from crawl</button>`);
   });
 }
 function drawRoute(){
@@ -634,20 +676,28 @@ $("tabCrawl").onclick = () => selectTab("crawl");
 $("btnFit").onclick = fitAll;
 
 $("results").addEventListener("click", e => {
+  const rm = e.target.closest("[data-remove]");
+  if (rm){ removeById(rm.dataset.remove); return; }
   const b = e.target.closest("[data-add]"); if (!b) return;
   const v = VENUES.find(x => x.id === b.dataset.add);
   if (v) addStop(v);
 });
 map.on("popupopen", e => {
-  const btn = e.popup.getElement()?.querySelector("[data-addmap]");
-  if (!btn) return;
-  btn.onclick = () => {
-    const v = VENUES.find(x => x.id === btn.dataset.addmap);
+  const el = e.popup.getElement(); if (!el) return;
+  const add = el.querySelector("[data-addmap]");
+  if (add) add.onclick = () => {
+    const v = VENUES.find(x => x.id === add.dataset.addmap);
     if (v){ addStop(v); map.closePopup(); }
   };
+  const rm = el.querySelector("[data-rmmap]");
+  if (rm) rm.onclick = () => { removeById(rm.dataset.rmmap); map.closePopup(); };
 });
 
 /* crawl bar */
+$("btnSettings").onclick = () => {
+  const open = $("crawlbar").classList.toggle("open");
+  $("btnSettings").setAttribute("aria-expanded", String(open));
+};
 $("crawlPick").onchange = e => setActive(e.target.value);
 $("crawlName").addEventListener("input", e => {
   const c = active(); if (!c) return;
@@ -655,6 +705,7 @@ $("crawlName").addEventListener("input", e => {
   $("tagline").textContent = c.name;
   const opt = $("crawlPick").selectedOptions[0];
   if (opt) opt.textContent = `${c.name} · ${c.stops.length} stops`;
+  $("settingsLabel").textContent = `${c.name} · ${c.stops.length} ${c.stops.length===1?"stop":"stops"}`;
   save();
 });
 $("crawlDate").addEventListener("change", e => { const c=active(); if(c){ c.date=e.target.value; save(); } });
